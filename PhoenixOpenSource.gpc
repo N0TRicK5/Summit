@@ -1,0 +1,84 @@
+#pragma METAINFO("PhoenixOpenSource", 1, 0, "Phoenix")
+
+#define	AIM_X STICK_1_X
+#define	AIM_Y STICK_1_Y
+
+fix32  phxGVCAction   		    = 0.00; // action, tracking = 1.00
+fix32  phxXTarget     			= 0.00; // x position
+fix32  phxYTarget     			= 0.00; // y position
+fix32  phxTargetDst 			= 0.00; // distance from position
+fix32  phxDecayAmount           = 0.20; // decay amount from phoneix settings
+
+bool   phxIsAutoShoot 			= FALSE; // is auto shoot enabled from phoneix settings
+uint16 phxAutoShootDistance 	= 50; // Auto shoot distance
+
+main {
+	// Get current X and Y
+	fix32 currentX = get_actual(AIM_X);
+	fix32 currentY = get_actual(AIM_Y);
+	
+	// Decay the tracking to 0 gradually
+	if (phxXTarget > 0.00)
+	{
+		phxXTarget -= phxDecayAmount;
+
+		if (phxXTarget < 0.00)
+		{
+			phxXTarget = 0.00;
+		}
+	}
+	else
+	{
+		phxXTarget += phxDecayAmount;
+
+		if (phxXTarget > 0.00)
+		{
+			phxXTarget = 0.00;
+		}
+	}
+
+	if (phxYTarget > 0.00)
+	{
+		phxYTarget -= phxDecayAmount;
+
+		if (phxYTarget < 0.00)
+		{
+			phxYTarget = 0.00;
+		}
+	}
+	else
+	{
+		phxYTarget += phxDecayAmount;
+
+		if (phxYTarget > 0.00)
+		{
+			phxYTarget = 0.00;
+		}
+	}
+
+	// Capture GCV data from Phoenix
+	if(gcv_ready()) {
+		gcv_read(0, &phxGVCAction);
+		phxGVCAction = (fix32) round(phxGVCAction);
+		
+		if (phxGVCAction == 1.00) {
+			gcv_read(4,  &phxXTarget);
+			gcv_read(8,  &phxYTarget);
+			gcv_read(12, &phxTargetDst);
+			gcv_read(16, &phxIsAutoShoot);
+			gcv_read(17, &phxAutoShootDistance);
+			gcv_read(19, &phxDecayAmount);
+		}
+
+		phxGVCAction = 0.00;
+	}
+	
+	// Activate auto shoot if target within shoot distance
+	if (phxIsAutoShoot && phxTargetDst <= (fix32)phxAutoShootDistance) {
+		set_val(BUTTON_5, 100);
+	}
+	
+	// Set new X and Y
+	set_val(AIM_X, clamp(currentX + phxXTarget, -100f, 100f));
+	set_val(AIM_Y, clamp(currentY + phxYTarget, -100f, 100f));
+}
